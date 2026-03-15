@@ -1,0 +1,121 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the WorkSync system",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "manager", "employee"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role", "createdAt"]
+    },
+    "Workflow": {
+      "title": "Workflow",
+      "description": "A defined sequence of steps for tasks",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "steps": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "steps", "createdBy", "createdAt"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "An actionable item assigned to employees",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "workflowId": { "type": "string" },
+        "currentStepIndex": { "type": "number" },
+        "status": { "type": "string", "enum": ["Pending", "In Progress", "Submitted", "Approved", "Rejected", "Completed"] },
+        "assignedTo": { "type": "array", "items": { "type": "string" } },
+        "deadline": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "documents": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "url": { "type": "string" },
+              "type": { "type": "string" }
+            }
+          }
+        },
+        "comments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "userId": { "type": "string" },
+              "text": { "type": "string" },
+              "createdAt": { "type": "string", "format": "date-time" }
+            }
+          }
+        }
+      },
+      "required": ["title", "workflowId", "status", "assignedTo", "createdBy", "createdAt"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "System alerts for users",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "message", "read", "createdAt"]
+    },
+    "History": {
+      "title": "History",
+      "description": "Audit log for tasks",
+      "type": "object",
+      "properties": {
+        "taskId": { "type": "string" },
+        "action": { "type": "string" },
+        "userId": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["taskId", "action", "userId", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Stores user profiles and roles"
+    },
+    "/workflows/{workflowId}": {
+      "schema": { "$ref": "#/entities/Workflow" },
+      "description": "Stores workflow definitions"
+    },
+    "/tasks/{taskId}": {
+      "schema": { "$ref": "#/entities/Task" },
+      "description": "Stores task instances"
+    },
+    "/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/Notification" },
+      "description": "Stores user notifications"
+    },
+    "/history/{historyId}": {
+      "schema": { "$ref": "#/entities/History" },
+      "description": "Stores audit logs"
+    }
+  }
+}

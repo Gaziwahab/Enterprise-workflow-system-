@@ -1,0 +1,231 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - uid: string (required)
+    //   - email: string (required)
+    //   - displayName: string (optional)
+    //   - photoURL: string (optional)
+    //   - role: string (required, 'admin'|'manager'|'employee')
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: workflows
+    // Document ID: {workflowId}
+    // Fields:
+    //   - name: string (required)
+    //   - description: string (optional)
+    //   - steps: list of strings (required)
+    //   - createdBy: string (required)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: tasks
+    // Document ID: {taskId}
+    // Fields:
+    //   - title: string (required)
+    //   - description: string (optional)
+    //   - workflowId: string (required)
+    //   - currentStepIndex: number (optional)
+    //   - status: string (required, 'Pending'|'In Progress'|'Submitted'|'Approved'|'Rejected'|'Completed')
+    //   - assignedTo: list of strings (required)
+    //   - deadline: timestamp (optional)
+    //   - createdBy: string (required)
+    //   - createdAt: timestamp (required)
+    //   - updatedAt: timestamp (required)
+    //   - documents: list of objects (optional)
+    //   - comments: list of objects (optional)
+    //
+    // Collection: notifications
+    // Document ID: {notificationId}
+    // Fields:
+    //   - userId: string (required)
+    //   - title: string (required)
+    //   - message: string (required)
+    //   - read: boolean (required)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: history
+    // Document ID: {historyId}
+    // Fields:
+    //   - taskId: string (required)
+    //   - action: string (required)
+    //   - userId: string (required)
+    //   - timestamp: timestamp (required)
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+        (request.auth.token.email == "gaziwahab58@gmail.com" && request.auth.token.email_verified == true)
+      );
+    }
+
+    function isManager() {
+      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager';
+    }
+
+    function isEmployee() {
+      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'employee';
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function isValidString(val, minLen, maxLen) {
+      return val is string && val.size() >= minLen && val.size() <= maxLen;
+    }
+
+    function isValidOptionalString(field, minLen, maxLen) {
+      return !(field in request.resource.data) || isValidString(request.resource.data[field], minLen, maxLen);
+    }
+
+    function areImmutableFieldsUnchanged(fields) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    
+    function isValidUser() {
+      let data = request.resource.data;
+      return hasRequiredFields(['uid', 'email', 'role', 'createdAt']) &&
+             data.uid is string && data.uid.size() > 0 && data.uid.size() < 128 &&
+             data.email is string && data.email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$") &&
+             data.role in ['admin', 'manager', 'employee'] &&
+             data.createdAt is timestamp &&
+             isValidOptionalString('displayName', 0, 100) &&
+             isValidOptionalString('photoURL', 0, 1000);
+    }
+
+    function isValidWorkflow() {
+      let data = request.resource.data;
+      return hasRequiredFields(['name', 'steps', 'createdBy', 'createdAt']) &&
+             isValidString(data.name, 1, 100) &&
+             isValidOptionalString('description', 0, 1000) &&
+             data.steps is list && data.steps.size() <= 20 &&
+             data.createdBy is string && data.createdBy.size() > 0 && data.createdBy.size() < 128 &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidTask() {
+      let data = request.resource.data;
+      return hasRequiredFields(['title', 'workflowId', 'status', 'assignedTo', 'createdBy', 'createdAt', 'updatedAt']) &&
+             isValidString(data.title, 1, 200) &&
+             isValidOptionalString('description', 0, 5000) &&
+             data.workflowId is string && data.workflowId.size() > 0 && data.workflowId.size() < 128 &&
+             data.status in ['Pending', 'In Progress', 'Submitted', 'Approved', 'Rejected', 'Completed'] &&
+             data.assignedTo is list && data.assignedTo.size() <= 50 &&
+             data.createdBy is string && data.createdBy.size() > 0 && data.createdBy.size() < 128 &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp &&
+             (!( 'currentStepIndex' in data ) || data.currentStepIndex is number) &&
+             (!( 'deadline' in data ) || data.deadline is timestamp) &&
+             (!( 'documents' in data ) || (data.documents is list && data.documents.size() <= 20)) &&
+             (!( 'comments' in data ) || (data.comments is list && data.comments.size() <= 100));
+    }
+
+    function isValidNotification() {
+      let data = request.resource.data;
+      return hasRequiredFields(['userId', 'title', 'message', 'read', 'createdAt']) &&
+             data.userId is string && data.userId.size() > 0 && data.userId.size() < 128 &&
+             isValidString(data.title, 1, 200) &&
+             isValidString(data.message, 1, 1000) &&
+             data.read is bool &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidHistory() {
+      let data = request.resource.data;
+      return hasRequiredFields(['taskId', 'action', 'userId', 'timestamp']) &&
+             data.taskId is string && data.taskId.size() > 0 && data.taskId.size() < 128 &&
+             isValidString(data.action, 1, 500) &&
+             data.userId is string && data.userId.size() > 0 && data.userId.size() < 128 &&
+             data.timestamp is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      // Admins can read all. Managers/Employees can read all users (needed for assigning tasks, etc).
+      // If privacy is strict, we'd limit this, but for a company workflow app, users need to see each other.
+      allow read: if isAuthenticated();
+      
+      // Only admins can create users, OR a user can create their own profile if they are the default admin.
+      // Wait, any user needs to create their profile on first login.
+      // We'll allow users to create their own profile, BUT they can only set role to 'employee' unless they are the default admin.
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser() && (
+        (request.resource.data.role == 'employee') || isAdmin()
+      );
+      
+      // Only admins can update other users (e.g., change roles). Users can update their own non-role fields.
+      allow update: if isAuthenticated() && isValidUser() && (
+        isAdmin() || 
+        (isOwner(userId) && areImmutableFieldsUnchanged(['role', 'uid', 'email', 'createdAt']))
+      );
+      
+      allow delete: if isAdmin();
+    }
+
+    match /workflows/{workflowId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidWorkflow();
+      allow update: if isAdmin() && isValidWorkflow() && areImmutableFieldsUnchanged(['createdBy', 'createdAt']);
+      allow delete: if isAdmin();
+    }
+
+    match /tasks/{taskId} {
+      // Everyone can read tasks they are involved in or if they are admin/manager.
+      allow read: if isAuthenticated() && (isAdmin() || isManager() || request.auth.uid in resource.data.assignedTo || resource.data.createdBy == request.auth.uid);
+      
+      // Admins and Managers can create tasks.
+      allow create: if (isAdmin() || isManager()) && isValidTask() && request.resource.data.createdBy == request.auth.uid;
+      
+      // Admins and Managers can update any task. Employees can update tasks assigned to them.
+      allow update: if isAuthenticated() && isValidTask() && (
+        isAdmin() || isManager() || 
+        (request.auth.uid in resource.data.assignedTo && areImmutableFieldsUnchanged(['title', 'workflowId', 'createdBy', 'createdAt', 'assignedTo']))
+      );
+      
+      allow delete: if isAdmin() || isManager();
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      // System (via cloud function) usually creates notifications, but client might create them here.
+      allow create: if isAuthenticated() && isValidNotification();
+      allow update: if isOwner(resource.data.userId) && isValidNotification() && areImmutableFieldsUnchanged(['userId', 'title', 'message', 'createdAt']);
+      allow delete: if isOwner(resource.data.userId) || isAdmin();
+    }
+
+    match /history/{historyId} {
+      // Anyone involved in the task can read its history.
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidHistory() && request.resource.data.userId == request.auth.uid;
+      allow update: if false; // History is immutable
+      allow delete: if isAdmin();
+    }
+  }
+}

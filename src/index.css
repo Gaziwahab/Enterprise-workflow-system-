@@ -1,0 +1,106 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --animate-blob: blob 7s infinite;
+  --animate-pulse: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  
+  @keyframes blob {
+    0% {
+      transform: translate(0px, 0px) scale(1);
+    }
+    33% {
+      transform: translate(30px, -50px) scale(1.1);
+    }
+    66% {
+      transform: translate(-20px, 20px) scale(0.9);
+    }
+    100% {
+      transform: translate(0px, 0px) scale(1);
+    }
+  }
+}
+
+@layer utilities {
+  .clay-card {
+    @apply bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-red-900/20;
+    box-shadow: 
+      8px 8px 16px rgba(0, 0, 0, 0.04),
+      -8px -8px 16px rgba(255, 255, 255, 0.8),
+      inset -2px -2px 5px rgba(0, 0, 0, 0.02),
+      inset 2px 2px 5px rgba(255, 255, 255, 1);
+  }
+  .dark .clay-card {
+    @apply bg-slate-900 border-slate-800;
+    box-shadow: 
+      10px 10px 20px rgba(0, 0, 0, 0.4),
+      -10px -10px 20px rgba(255, 255, 255, 0.02),
+      inset -2px -2px 5px rgba(0, 0, 0, 0.5),
+      inset 2px 2px 5px rgba(255, 255, 255, 0.02);
+  }
+
+  .clay-btn-primary {
+    @apply bg-red-600 text-white rounded-2xl font-bold transition-all active:scale-95 border border-red-500;
+    box-shadow: 
+      6px 6px 12px rgba(220, 38, 38, 0.25),
+      -6px -6px 12px rgba(255, 255, 255, 0.8),
+      inset -2px -2px 5px rgba(153, 27, 27, 0.4),
+      inset 2px 2px 5px rgba(248, 113, 113, 0.6);
+  }
+  .dark .clay-btn-primary {
+    box-shadow: 
+      6px 6px 12px rgba(0, 0, 0, 0.4),
+      -2px -2px 8px rgba(255, 255, 255, 0.05),
+      inset -2px -2px 5px rgba(153, 27, 27, 0.4),
+      inset 2px 2px 5px rgba(248, 113, 113, 0.4);
+  }
+
+  .clay-btn-secondary {
+    @apply bg-white dark:bg-slate-800 text-red-600 dark:text-red-400 rounded-2xl font-bold transition-all active:scale-95 border border-slate-100 dark:border-red-900/30;
+    box-shadow: 
+      4px 4px 10px rgba(0, 0, 0, 0.04),
+      -4px -4px 10px rgba(255, 255, 255, 0.8),
+      inset -2px -2px 4px rgba(0, 0, 0, 0.02),
+      inset 2px 2px 4px rgba(255, 255, 255, 1);
+  }
+  .dark .clay-btn-secondary {
+    box-shadow: 
+      4px 4px 10px rgba(0, 0, 0, 0.3),
+      -2px -2px 8px rgba(255, 255, 255, 0.02),
+      inset -2px -2px 4px rgba(0, 0, 0, 0.2),
+      inset 2px 2px 4px rgba(255, 255, 255, 0.02);
+  }
+
+  .bg-mesh {
+    background-color: #fafafa;
+    background-image: 
+      radial-gradient(at 10% 10%, rgba(239, 68, 68, 0.06) 0px, transparent 40%),
+      radial-gradient(at 90% 10%, rgba(220, 38, 38, 0.04) 0px, transparent 40%),
+      radial-gradient(at 50% 50%, rgba(248, 113, 113, 0.04) 0px, transparent 60%),
+      radial-gradient(at 10% 90%, rgba(220, 38, 38, 0.06) 0px, transparent 40%),
+      radial-gradient(at 90% 90%, rgba(239, 68, 68, 0.04) 0px, transparent 40%);
+  }
+  .dark .bg-mesh {
+    background-color: #020617;
+    background-image: 
+      radial-gradient(at 10% 10%, rgba(220, 38, 38, 0.08) 0px, transparent 40%),
+      radial-gradient(at 90% 10%, rgba(153, 27, 27, 0.08) 0px, transparent 40%),
+      radial-gradient(at 50% 50%, rgba(220, 38, 38, 0.05) 0px, transparent 60%),
+      radial-gradient(at 10% 90%, rgba(153, 27, 27, 0.08) 0px, transparent 40%),
+      radial-gradient(at 90% 90%, rgba(220, 38, 38, 0.08) 0px, transparent 40%);
+  }
+  .animation-delay-2000 {
+    animation-delay: 2s;
+  }
+  .animation-delay-4000 {
+    animation-delay: 4s;
+  }
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+}
+
+body {
+  @apply bg-[#fafafa] dark:bg-slate-950 text-slate-900 dark:text-slate-50;
+}
